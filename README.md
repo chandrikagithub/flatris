@@ -1,3 +1,5 @@
+[![Build Status](https://dev.azure.com/chandrikadevops/Simple_Devops_Project/_apis/build/status/chandrikagithub.flatris?branchName=master)](https://dev.azure.com/chandrikadevops/Simple_Devops_Project/_build/latest?definitionId=2&branchName=master)
+
 [![Flatris](flatris.png)](https://flatris.space/)
 
 [![Build Status](https://travis-ci.org/skidding/flatris.svg?branch=master)](https://travis-ci.org/skidding/flatris)
