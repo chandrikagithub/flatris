@@ -1,27 +1,62 @@
-# Node.js with React
-# Build a Node.js project that uses React.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
 
 trigger:
 - master
+variables:
+- group: DEVOPS_VAR_GROUP
+- group: Devops_VAR_GIT_GROUP
+- group: DEV_VAR_VERSIONS
+- group: DEVOPS_VAR_CRED
+- group: STAGE_VAR_VERSIONS
 
 pool:
-  vmImage: 'macos-latest'
+  vmImage: 'ubuntu-latest'
+stages:
+- stage:
+  variables:
+    ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}: 
+     current_date: dev_$(date +'%Y%m%d')
+    ${{ if eq(variables['Build.SourceBranchName'], 'release') }}: 
+     current_date: stage_$(date +'%Y%m%d')
+  jobs:
+  - job: A
+    displayName: Setup_Dev_Branch_Version_Number
+    condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'dev'))
+    variables:
+       dev_run_no: $[counter(variables['current_date'], 1)]      
+    steps:
+     - script: |
+         echo This is dev branch, so increment Dev build number
+         echo current date : $(current_date)
+         echo DEV_BUILD_NUMBER : $(dev_vrsn).$(current_date).$(dev_run_no)
+         echo dev_run_no : $(dev_run_no)
+         curl -u "$(vg_user):$(vg_pass)" \
+         -X PUT -H "Content-Type: application/json" \
+         -d '{"variables":{"dev_run_number":{"value":"$(dev_run_no)"},"dev_build_number":{"value":"$(dev_vrsn).$(JSON.parse(current_date)).$(dev_run_no)"},"dev_vrsn":{"value":"$(dev_vrsn)"}},"type":"Vsts","name":"DEV_VAR_VERSIONS","description":"Updated DEV variable group"}' \
+         https://dev.azure.com/chandrikadevops/Simple_Devops_Project/_apis/distributedtask/variablegroups/4?api-version=5.1-preview.1
+         sleep 4
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '10.x'
-  displayName: 'Install Node.js'
-
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
-- task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: "JaCoCo"
-    summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/site/jacoco/jacoco.xml"
-    reportDirectory: "$(System.DefaultWorkingDirectory)/**/site/jacoco"
-    failIfCoverageEmpty: true
+  - job: B
+    displayName: Setup_Stage_Branch_Version_Number
+    condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'release'))
+    variables:
+      stage_run_no: $[counter(variables['current_date'], 1)]
+    steps:
+      - script: |
+          echo This is stage branch, so increment stage build number
+          echo current date : $(current_date)
+          echo STAGE_BUILD_NUMBER : $(stage_vrsn).$(current_date).$(stage_run_no)
+          echo stage_run_no : $(stage_run_no)
+          #curl -u "$(vg_user):$(vg_pass)" \
+          #-X PUT -H "Content-Type: application/json" \
+          #-d '{"variables":{"stage_run_number":{"value":"$(stage_run_no)"},"stage_build_number":{"value":"$(stage_vrsn).$(current_date).$(stage_run_no)"},"stage_vrsn":{"value":"$(stage_vrsn)"}},"type":"Vsts","name":"STAGE_VAR_VERSIONS","description":"Updated STAGE variable group"}' \
+          #https://dev.azure.com/chandrikadevops/Simple_Devops_Project/_apis/distributedtask/variablegroups/5?api-version=5.1-preview.1
+          #sleep 4 
+  - job: C
+    displayName: C job Dependent on A job
+    dependsOn: A
+    steps:
+     - script: echo C job will run only if A job is successful
